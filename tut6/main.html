@@ -1,0 +1,39 @@
+<html>
+	<head>
+		<title>WebGL Tutorial Section 2</title>
+		<script src="gl-matrix.js"></script>
+		<script src="main.js"></script>
+		<script id="shader-fs" type="x-shader/x-fragment">
+			precision mediump float;
+
+			varying vec2 vTextureCoordinate;
+
+			uniform sampler2D uSampler;
+
+			void main(void) {
+				gl_FragColor = texture2D(uSampler, vec2(vTextureCoordinate.s, vTextureCoordinate.t));;
+			}
+		</script>
+
+		<script id="shader-vs" type="x-shader/x-vertex">
+			attribute vec3 aVertexPosition;
+			attribute vec2 aTextureCoordinate;
+
+			uniform mat4 uPMatrix;
+			uniform mat4 uMVMatrix;
+
+			varying vec4 vColor;
+			varying vec2 vTextureCoordinate;
+
+			void main(void){
+				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+				vTextureCoordinate = aTextureCoordinate;
+			}
+		</script>
+	</head>
+	<body onload="launch();">
+		<a href="http://learningwebgl.com/blog/?p=134">Tutorial</a>
+
+		<canvas id="canvas" width="600" height="600"/>
+	</body>
+</html>
