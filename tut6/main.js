@@ -10,6 +10,9 @@ function launch()
 	initBuffers();
 	initTextures();
 
+	document.onkeydown = handleKeyDown;
+	document.onkeyup = handleKeyUp;
+
 	console.log("Initialized");
 
 	tick();
@@ -51,9 +54,60 @@ var ySpeed = 0;
 var zRot = 0;
 var zSpeed = 0;
 
-var z = -5.0;
+var z = -7.0;
 
 var filter = 0;
+
+var pressedKeys = {};
+
+function handleKeyUp(event)
+{
+	pressedKeys[event.keyCode] = false;
+}
+
+function handleKeyDown(event)
+{
+	pressedKeys[event.keyCode] = true;
+
+	if(String.fromCharCode(event.keyCode) == "F"){
+		filter = (filter + 1) % 3;
+	}
+}
+
+
+function handleKeys() {
+	if(pressedKeys[65]){	//a
+		xSpeed -= 1;
+	}
+
+	if(pressedKeys[81]){	//q
+		xSpeed += 1;
+	}
+
+	if(pressedKeys[83]){	//s
+		ySpeed -= 1;
+	}
+
+	if(pressedKeys[87]){	//w
+		ySpeed += 1;
+	}
+
+	if(pressedKeys[68]){	//d
+		zSpeed -= 1;
+	}
+
+	if(pressedKeys[69]){		//e
+		zSpeed += 1;
+	}
+
+	if(pressedKeys[82]){		//r
+		z += .01;
+	}
+
+	if(pressedKeys[84]){		//t
+		z -= .01;
+	}
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // textures                                                                             //
@@ -61,26 +115,46 @@ var filter = 0;
 //                                                                                      //
 //////////////////////////////////////////////////////////////////////////////////////////
 
-var neheTexture;
+var textures = [];
 
 function initTextures()
 {
-	neheTexture = gl.createTexture();
-	neheTexture.image = new Image();
-	neheTexture.image.onload = function(){
-		handleLoadedTexture(neheTexture);
+	var img = new Image();
+
+	for(var i = 0 ; i < 3 ; i++)
+	{
+		var texture = gl.createTexture();
+		texture.image = img;
+		textures.push(texture);
 	}
 
-	neheTexture.image.src = "crate.gif";
+	img.onload = function(){
+		handleLoadedTexture(textures);
+	}
+
+	img.src = "crate.gif";
 }
 
-function handleLoadedTexture(texture)
+function handleLoadedTexture(textures)
 {
-	gl.bindTexture(gl.TEXTURE_2D, texture);
 	gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
+
+	gl.bindTexture(gl.TEXTURE_2D, textures[0]);
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textures[0].image);
    	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
    	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+
+	gl.bindTexture(gl.TEXTURE_2D, textures[1]);
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textures[1].image);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+
+	gl.bindTexture(gl.TEXTURE_2D, textures[2]);
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textures[2].image);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+    gl.generateMipmap(gl.TEXTURE_2D);
+
 	gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
@@ -168,15 +242,13 @@ function getShader(gl, id)
 // rendering                                                                                  //
 //                                                                                            //
 //                                                                                            //
-////////77//////////////////////////////////////////////////////////////////////////////////////
-
-var rotationCube = 0;
+////////////////////////////////////////////////////////////////////////////////////////////////
 
 function tick()
 {
+	handleKeys();
 	draw();
 	animate();
-
 	requestAnimationFrame(tick);
 }
 
@@ -188,7 +260,9 @@ function animate()
 
 	var elapsed = timeNow - lastTime;
 
-	rotationCube += 125 * elapsed / 1000.;
+	xRot += xSpeed * elapsed / 1000.
+	yRot += ySpeed * elapsed / 1000.
+	zRot += zSpeed * elapsed / 1000.
 
 	lastTime = timeNow;
 }
@@ -208,8 +282,10 @@ function draw()
 
 	//create model-view matrix
 	mat4.identity(mvMatrix);
-	mat4.translate(mvMatrix, [0, 0, -7]);
-	mat4.rotate(mvMatrix, degToRad(rotationCube), [0.5, 1, 0.2]);
+	mat4.translate(mvMatrix, [0, 0, z]);
+	mat4.rotate(mvMatrix, degToRad(xRot), [1, 0, 0]);
+	mat4.rotate(mvMatrix, degToRad(yRot), [0, 1, 0]);
+	mat4.rotate(mvMatrix, degToRad(zRot), [0, 0, 1]);
 
 	//draw cube
 	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
@@ -219,7 +295,7 @@ function draw()
 	gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, cubeTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
 	gl.activeTexture(gl.TEXTURE0);
-	gl.bindTexture(gl.TEXTURE_2D, neheTexture);
+	gl.bindTexture(gl.TEXTURE_2D, textures[filter]);
 	gl.uniform1i(shaderProgram.samplerUniform, 0);
 
 	setMatrixUniforms();
